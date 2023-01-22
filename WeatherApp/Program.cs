@@ -1,9 +1,13 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using Newtonsoft.Json;
 using WeatherApp;
 
 const string key = "insert your key here";
 
+var culture = new CultureInfo("ru-RU");
+Thread.CurrentThread.CurrentCulture = culture;
+Thread.CurrentThread.CurrentUICulture = culture;
 Console.InputEncoding = Encoding.Unicode;
 Console.WriteLine("Это приложение отображает погоду для выбранного города с помощью OpenWeatherMap API");
 Console.Write("Введите название города: ");
@@ -31,15 +35,16 @@ if (response.IsSuccessStatusCode)
 
     Console.WriteLine("----------------------------------------");
     Console.WriteLine("Показывается погода для города: " + weather.Name);
-    Console.WriteLine($"Температура: {weather.Main.Temp}, {weather.Weather[0].Description}");
-    Console.WriteLine($"Ощущается как: {weather.Main.FeelsLike}");
-    Console.WriteLine($"Скорость ветра: {weather.Wind.Speed} м/с, направление: {windDirection}");
+    Console.WriteLine($"Температура: {Math.Round(weather.Main.Temp):+#;-#;+0}°C, {weather.Weather[0].Description}");
+    Console.WriteLine($"Ощущается как: {Math.Round(weather.Main.FeelsLike):+#;-#;+0}°C");
+    Console.WriteLine($"Скорость ветра: {weather.Wind.Speed:N1} м/с, направление: {windDirection}");
     Console.WriteLine($"Влажность: {weather.Main.Humidity}%, давление {weather.Main.Pressure} мм рт. ст.");
 }
 else
 {
     var reader = JsonConvert.DeserializeObject<Error>(await response.Content.ReadAsStringAsync());
     Console.WriteLine($"Ошибка: {reader!.Message}");
+    return;
 }
 
 #endregion
@@ -55,14 +60,14 @@ if (response.IsSuccessStatusCode)
     var timezone = weather!.City.Timezone;
     var days = weather.List.GroupBy(x => epoch.AddSeconds(x.Dt + timezone).Date);
     Console.WriteLine("-------------------------------------------------------------------------------------");
-    Console.WriteLine($"{"Дата",10} | {"День недели",11} | {"Мин. и макс. температура",24} | {"Описание",25} |");
+    Console.WriteLine($"{"Дата",10} | {"День недели",11} | {"Мин. и макс. температура",25} | {"Описание",25} |");
 
     foreach (var day in days)
     {
-        var min = day.Select(x => x.Main.TempMin).Min();
-        var max = day.Select(x => x.Main.TempMax).Max();
+        var min = Math.Round(day.Select(x => x.Main.TempMin).Min()).ToString("+#;-#;+0");
+        var max = Math.Round(day.Select(x => x.Main.TempMax).Max()).ToString("+#;-#;+0");
         var description = day.ToArray()[0].Weather[0].Description;
-        Console.WriteLine($"{day.Key,10:d} | {day.Key.DayOfWeek,11} | {"Мин: " + min,12}{" Макс: " + max,12} | {description,25} |");
+        Console.WriteLine($"{day.Key,10:d} | {CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(day.Key.DayOfWeek),11} | {"Мин: " + min,10}°C {"Макс: " + max,10}°C | {description,25} |");
     }
 }
 else
